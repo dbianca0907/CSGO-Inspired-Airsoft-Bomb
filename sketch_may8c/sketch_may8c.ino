@@ -23,12 +23,15 @@
 #define S32 3
 #define output2 5
 
-
+//TO DO: de verificat valorile sub 10!!
 // Definirea pinilor pentru linii și coloane
 const byte ROWS = 4;
 const byte COLS = 4;
 byte rowPins[ROWS] = {30, 32, 34, 36}; // Linii conectate la pinii digitali 6, 7, 8, 9
 byte colPins[COLS] = {22, 24, 26, 28}; // Coloane conectate la pinii digitali 2, 3, 4, 5
+unsigned long previousMillis = 0; // Variabilă pentru stocarea timpului anterior
+unsigned long interval = 1000; // Intervalul de timp în milisecunde
+int tone_buzzer_timer = 2000;
 
 char hexaKeys[ROWS][COLS] = {
   {'1', '2', '3', 'A'},
@@ -50,8 +53,8 @@ Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS)
 // Creăm un obiect pentru controlul display-ului LCD
 LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS); 
 
-void beep() {
-  tone(buzzer, 500);
+void beep(int value) {
+  tone(buzzer, value);
   delay(100);
   noTone(buzzer);
 }
@@ -60,6 +63,12 @@ void blink_led_green() {
   digitalWrite(led_pin2, LOW);
   delay(100);
   digitalWrite(led_pin2, HIGH);
+}
+
+void blink_led_green_code() {
+  digitalWrite(led_pin2, HIGH);
+  delay(100);
+  digitalWrite(led_pin2, LOW);
 }
 
 void blink_led_red() {
@@ -109,11 +118,11 @@ bool displayRetypeMessage(Type t) {
     lcd.print(code);
   }
   lcd.setCursor(0, 1);
-  lcd.print("1 - yes or 2 - no");
+  lcd.print("1-yes or 2-no");
   while (1) {
     char key = customKeypad.getKey();
     if (key) {
-      beep();
+      beep(500);
       blink_led_green();
       if (key == '1') {
         return true;
@@ -168,22 +177,127 @@ void displayStartBomb() {
   print_timer_start();
 }
 
+void displayBombExplode() {
+  lcd.clear();
+  lcd.setCursor(2, 0);
+  lcd.print("BOMB EXPLODED");
+  lcd.setCursor(0, 1);
+  lcd.print("!TERRORISTS WIN!");
+  for (int i = 0; i < 20; i++) {
+   tone(buzzer, 2000); // Ton de bază
+  delay(50); // Pauză mică
+  noTone(buzzer); // Oprim tonul
+
+  tone(buzzer, 2500); // Ton de înaltă frecvență
+  delay(50); // Pauză mică
+  noTone(buzzer); // Oprim tonul
+
+  tone(buzzer, 3000); // Ton și mai înalt de înaltă frecvență
+  delay(100); // Pauză mică
+  noTone(buzzer); // Oprim tonul
+
+  delay(200); // Pauză între explozii
+  }
+}
+
 void displayBombArmed() {
   lcd.clear();
   lcd.setCursor(3, 0);
   lcd.print("BOMB ARMED!");
-  tone(buzzer, 800);
+  // // Sunetul de armare a bombei
+  for (int i = 200; i <= 1200; i += 100) {
+    tone(buzzer, i); // Emite un ton la frecvența i Hz
+    delay(50); // Pauză mică între tonuri pentru a crea efectul de crescendo
+  }
+
+  // Pauză între cicluri
   delay(100);
-  noTone(buzzer);
-  tone(buzzer, 1000);
-  delay(100);
-  noTone(buzzer);
-  tone(buzzer, 2000);
-  delay(100);
+
+  // Oprește tonul pentru o scurtă pauză
   noTone(buzzer);
   lcd.setCursor(4, 1);
   print_timer_start();
+  digitalWrite(led_pin2, LOW);
 }
+
+void error_code_sound() {
+  // Secvența de tonuri pentru semnalizarea unei erori de introducere a codului
+  for (int i = 1000; i <= 2000; i += 500) {
+    tone(buzzer, i); // Emite un ton la frecvența i Hz
+    delay(50); // Pauză între tonuri
+    noTone(buzzer); // Oprește tonul
+    delay(50); // Pauză între tonuri pentru a crea efectul auditiv
+  }
+}
+
+void displayBombDefused() {
+  lcd.clear();
+  lcd.setCursor(3, 0);
+  lcd.print("BOMB DEFUSED");
+  lcd.setCursor(0, 1);
+  lcd.print("!!!!!CS WIN!!!!!");
+  // Secvența de tonuri crescătoare
+  for (int i = 100; i <= 1000; i += 50) {
+    tone(buzzer, i);
+    delay(10);
+  }
+  noTone(buzzer);
+  delay(100);
+
+  for (int i = 1000; i >= 100; i -= 50) {
+    tone(buzzer, i); // Emite un ton la frecvența i Hz
+    delay(10);
+  }
+  // Oprește tonul pentru o pauză mai lungă
+  noTone(buzzer);
+  digitalWrite(led_pin2, HIGH);
+}
+
+void decrementTime() {
+  unsigned long currentMillis = millis(); // Obțineți timpul actual în milisecunde
+
+  // Verificați dacă trebuie să scădeți timpul
+  if (currentMillis - previousMillis >= interval) {
+    // Actualizați timpul anterior
+    previousMillis = currentMillis;
+
+    // Scadeți timpul
+    if (seconds > 0) {
+      seconds--;
+    } else {
+      if (minutes > 0) {
+        minutes--;
+        seconds = 59;
+      } else {
+        // Dacă timerul a expirat, opriți beep-ul și ieșiți din buclă
+        return;
+      }
+    }
+
+    // Afisati timpul pe LCD
+    lcd.setCursor(8, 1);
+    lcd.print("|");
+    lcd.setCursor(9, 1);
+    if (minutes < 10) {
+      lcd.print(0);
+      lcd.print(minutes);
+    } else {
+      lcd.print(minutes);
+    }
+    lcd.setCursor(12, 1);
+    lcd.print(":");
+    lcd.setCursor(14, 1);
+    if (seconds < 10) {
+      lcd.print(0);
+      lcd.print(seconds);
+    } else {
+      lcd.print(seconds);
+    }
+    blink_led_red();
+    //beep(2000);
+  }
+}
+
 
 
 void game_mode_1() {
@@ -198,7 +312,7 @@ void game_mode_1() {
     char key = customKeypad.getKey();
     
     if (key && key >= '0' && key <= '9') {
-      beep();
+      beep(500);
       blink_led_green();
       if (pos == 0) {
         int ch = key - '0';
@@ -246,12 +360,11 @@ void game_mode_1() {
     char key = customKeypad.getKey();
 
     if (key) {
-      beep();
+      beep(500);
       blink_led_green();
       code[nr_digits] = key;
       lcd.print(key);
-      nr_digits++;
-      if (nr_digits == 4) {
+      if (nr_digits == 3) {
         delay(500);
         if (displayRetypeMessage(CODE)) {
           for (int i = 0; i < 4; i++) {
@@ -265,15 +378,17 @@ void game_mode_1() {
         code_pos += 2;
         lcd.setCursor(code_pos, 1);
       }
-
+      nr_digits++;
     }
   }
 
+  Serial.println(code);
   displayStartBomb();
+
   while (1) {
     char key = customKeypad.getKey();
     if (key == 'A') {
-      beep();
+      beep(500);
       blink_led_green();
       break;
     }
@@ -284,36 +399,57 @@ void game_mode_1() {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("CODE: ");
-  bool typing_code = false;
-  int code_digits = 0;
-  int totalTime = minutes * 60 + seconds;
-  int time_frequency = 1;
-  for (int t = totalTime; t >= 0; t--) {
-    blink_led_red();
-    beep();
+  lcd.setCursor(0, 1);
+  lcd.print("TIMER:");
+  int pos_code = 0;
+  char input_code[4] = {'\0', '\0', '\0', '\0'};
+  bool correct_code = true;
+  while (true) {
+    // Verificăm și gestionăm decrementarea timpului
+    decrementTime();
+    if (minutes == 0 && seconds == 0) {
+      displayBombExplode();
+    }
     char key = customKeypad.getKey();
+    // Verificăm dacă s-au introdus date de la tastatură
     if (key) {
-      Serial.println(key);
-      if (key != code[code_digits]) {
-        Serial.println("Intra aici!");
-        time_frequency += 0.2;
-        code_digits = 0;
+      beep(1000);
+      blink_led_green_code();
+      lcd.setCursor(6 + pos_code, 0);
+      lcd.print("*");
+      // Citim codul introdus
+      input_code[pos_code] = key;
+      if (pos_code == 3) {
+        for (int i = 0 ; i < 4; i++) {
+          if (input_code[i] != code[i]) {
+            correct_code = false;
+          }
+        }
+          // Dacă codul este corect, oprim timerul
+        if (correct_code) {
+          displayBombDefused();
+          break; // Ieșim din buclă pentru a termina jocul
+        } else {
+          error_code_sound();
+          // Dacă codul este incorect, scădem timpul mai rapid
+          if (interval > 300) {
+            interval -= 300;
+          }
+          if (interval == 300) {
+              interval = 150;
+          }
+          for (int i = 0; i < 4; i ++) {
+            input_code[i] = '\0';
+            lcd.setCursor(i + 6, 0);
+            lcd.print(' ');
+          }
+          pos_code = 0;
+        }
+        correct_code = true;
+      } else {
+        pos_code++;
       }
-      if (code_digits == 3) {
-        // bomb defused
-      }
-      code_digits++;
     }
-    lcd.setCursor(4, 1);
-    lcd.print(t / 60);
-    lcd.setCursor(7, 1);
-    lcd.print(":");
-    lcd.setCursor(9, 1);
-    if (t % 60 < 10) {
-      lcd.print("0");
-    }
-    lcd.print(t % 60);
-    delay(1000 / time_frequency); // Așteptăm o secundă
   }
 }
 
@@ -328,29 +464,29 @@ void setup() {
   pinMode(led_pin1, OUTPUT);
   pinMode(led_pin2, OUTPUT);
   pinMode(buzzer, OUTPUT);
-  pinMode(S01, OUTPUT);
-  pinMode(S11, OUTPUT);
-  pinMode(S21, OUTPUT);
-  pinMode(S31, OUTPUT);
-  pinMode(output1, INPUT);
-  pinMode(S02, OUTPUT);
-  pinMode(S12, OUTPUT);
-  pinMode(S22, OUTPUT);
-  pinMode(S32, OUTPUT);
-  pinMode(output2, INPUT);
+  // pinMode(S01, OUTPUT);
+  // pinMode(S11, OUTPUT);
+  // pinMode(S21, OUTPUT);
+  // pinMode(S31, OUTPUT);
+  // pinMode(output1, INPUT);
+  // pinMode(S02, OUTPUT);
+  // pinMode(S12, OUTPUT);
+  // pinMode(S22, OUTPUT);
+  // pinMode(S32, OUTPUT);
+  // pinMode(output2, INPUT);
 
   digitalWrite(led_pin2, HIGH);
-  digitalWrite(S01, HIGH);
-  digitalWrite(S11, HIGH);
-  digitalWrite(S02, HIGH);
-  digitalWrite(S12, HIGH);
+  // digitalWrite(S01, HIGH);
+  // digitalWrite(S11, HIGH);
+  // digitalWrite(S02, HIGH);
+  // digitalWrite(S12, HIGH);
   displayInitialScreen();
 }
 
 void loop() {
   char key = customKeypad.getKey();
   if (key) {
-    beep();
+    beep(500);
     blink_led_green();
     if (key == '1') {
       game_mode_1();
