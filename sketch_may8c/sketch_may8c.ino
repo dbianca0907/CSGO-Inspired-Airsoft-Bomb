@@ -1,88 +1,99 @@
-#include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
-#include <Keypad.h>
+#include </Users/dumitru.bianca/Desktop/PM/CSGO-Inspired-Airsoft-Bomb/sketch_may8c/utils.h>
+
+// Functii specifice pentru game_mode_2
+void readSensor1() {
+  red = getRedPW(1);
+  redValue = map(red, redMin, redMax, 255, 0); // min la 255 si max la 0 (pwm invers la frequency)
+
+  blue = getBluePW(1);
+  blueValue = map(blue, blueMin, blueMax, 255, 0);
+
+  green = getGreenPW(1);
+  greenValue = map(green, greenMin, greenMax, 255, 0);
+}
+
+void readSensor2() {
+  red2 = getRedPW(2);
+  redValue2 = map(red2, redMin2, redMax2, 255, 0); // min la 255 si max la 0 (pwm invers la frequency)
+
+  blue2 = getBluePW(2);
+  blueValue2 = map(blue2, blueMin2, blueMax2, 255, 0);
+
+  green2 = getGreenPW(2);
+  greenValue2 = map(green2, greenMin2, greenMax2, 255, 0);
+}
+
+int verifyKey1() {
+  // Verificare cheie introdusa corect
+  if (redValue > blueValue && redValue > greenValue
+      && (redValue - blueValue) >= offsetSensor && (redValue - greenValue) >= offsetSensor) {
+    return 1;
+  }
+  // verificare cheie introdusa incorect
+  if (blueValue > redValue && blueValue > greenValue
+      && (blueValue - redValue) >= offsetSensor && (blueValue - greenValue) >= offsetSensor) {
+    return 2;
+  }
+  return 0;
+}
+
+int verifyKey2() {
+  // Verificare cheie introdusa corect
+  if (blueValue2 > redValue2 && blueValue2 > greenValue2
+      && (blueValue2 - redValue2) >= offsetSensor && (blueValue2 - greenValue2) >= offsetSensor) {
+    return 1;
+  }
+  // Verificare cheie introdusa incorect
+  if (redValue2 > blueValue2 && redValue2 > greenValue2
+      && (redValue2 - blueValue2) >= offsetSensor && (redValue2 - greenValue2) >= offsetSensor) {
+    return 2;
+  }
+  return 0;
+}
+int getRedPW(int type) {
+  int pw;
+  if (type == 1) {
+    digitalWrite(S21, LOW);
+    digitalWrite(S31, LOW);
+    pw = pulseIn(output1, LOW);
+  } else {
+    digitalWrite(S22, LOW);
+    digitalWrite(S32, LOW);
+    pw = pulseIn(output2, LOW);
+  } 
+  return pw;
+}
+
+int getGreenPW(int type) {
+  int pw;
+  if (type == 1) {
+    digitalWrite(S21, HIGH);
+    digitalWrite(S31, HIGH);
+    pw = pulseIn(output1, LOW);
+  } else {
+    digitalWrite(S22, HIGH);
+    digitalWrite(S32, HIGH);
+    pw = pulseIn(output2, LOW);
+  }
+  return pw;
+}
+
+int getBluePW(int type) {
+  int pw;
+  if (type == 1) {
+    digitalWrite(S21, LOW);
+    digitalWrite(S31, HIGH);
+    pw = pulseIn(output1, LOW);
+  } else {
+    digitalWrite(S22, LOW);
+    digitalWrite(S32, HIGH);
+    pw = pulseIn(output2, LOW);
+  }
+  return pw;
+}
 
 
-// Adresa I2C a display-ului LCD
-#define LCD_ADDRESS 0x27
-
-// Numărul de coloane și rânduri ale display-ului LCD
-#define LCD_COLUMNS 16
-#define LCD_ROWS 2
-#define led_pin1 23 // red
-#define led_pin2 25 // green
-#define buzzer 27
-#define S01 13
-#define S11 12
-#define S21 10
-#define S31 9
-#define output1 11
-
-#define S02 7
-#define S12 6
-#define S22 4
-#define S32 3
-#define output2 5
-
-int red = 0;
-int green = 0;
-int blue = 0;
-
-int redMin = 54;
-int redMax = 247;
-int blueMin = 58;
-int blueMax = 318;
-int greenMin = 69;
-int greenMax = 353;
-
-int redValue;
-int greenValue;
-int blueValue;
-
-int red2 = 0;
-int green2 = 0;
-int blue2 = 0;
-
-int redMin2 = 10;
-int redMax2 = 60;
-int blueMin2 = 12;
-int blueMax2 = 76;
-int greenMin2 = 7;
-int greenMax2 = 84;
-
-int redValue2;
-int greenValue2;
-int blueValue2;
-//TO DO: de verificat valorile sub 10!!
-// Definirea pinilor pentru linii și coloane
-const byte ROWS = 4;
-const byte COLS = 4;
-byte rowPins[ROWS] = {30, 32, 34, 36}; // Linii conectate la pinii digitali 6, 7, 8, 9
-byte colPins[COLS] = {22, 24, 26, 28}; // Coloane conectate la pinii digitali 2, 3, 4, 5
-unsigned long previousMillis = 0; // Variabilă pentru stocarea timpului anterior
-unsigned long interval = 1000; // Intervalul de timp în milisecunde
-int tone_buzzer_timer = 2000;
-
-char hexaKeys[ROWS][COLS] = {
-  {'1', '2', '3', 'A'},
-  {'4', '5', '6', 'B'},
-  {'7', '8', '9', 'C'},
-  {'*', '0', '#', 'D'}
-};
-
-enum Type {
-  CODE,
-  TIME
-};
-
-int minutes, seconds = 0;
-char code[4] = {'\0', '\0', '\0', '\0'};
-// Crearea obiectului Keypad
-Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
-
-// Creăm un obiect pentru controlul display-ului LCD
-LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS); 
-
+// Functii specifice pentru ambele moduri
 void beep(int value) {
   tone(buzzer, value);
   delay(100);
@@ -110,7 +121,57 @@ void blink_led_red() {
 void turn_off_green() {
   digitalWrite(led_pin2, LOW);
 }
+void displaySetTimerStart() {
+  displaySetTimer();
+  bool setTime = true;
+  int pos = 0;
+  bool retype = false;
+  while (setTime) {
+    lcd.blink();
 
+    char key = customKeypad.getKey();
+    
+    if (key && key >= '0' && key <= '9') {
+      beep(500);
+      blink_led_green();
+      if (pos == 0) {
+        int ch = key - '0';
+        minutes = 10 * ch;
+        lcd.print(key);
+        lcd.setCursor(5, 1);
+      } else if (pos == 1) {
+        minutes += key - '0';
+        lcd.print(key);
+        lcd.setCursor(9, 1);
+      } else if (pos == 2) {
+        seconds = 10 * (key - '0');
+        lcd.print(key);
+        lcd.setCursor(10, 1);
+      } else if (pos == 3) {
+        seconds += (key - '0');
+        lcd.print(key);
+        delay(500);
+        if (displayRetypeMessage(TIME)) {
+          minutes = 0;
+          seconds = 0;
+          retype = true;
+          displaySetTimer();
+        } else {
+          setTime = false;
+          break;
+        }
+      }
+      if (retype) {
+        pos = 0;
+        retype = false;
+      } else {
+        pos++;
+      }
+    }
+  }
+  Serial.println(minutes);
+  Serial.println(seconds);
+}
 
 void displayInitialScreen() {
   lcd.clear();
@@ -171,6 +232,14 @@ void displayIntroduceCode() {
   lcd.setCursor(3, 1);
 }
 
+void displayIntroduceKeys(){
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("!INTRODUCE KEYS!");
+  lcd.setCursor(0, 1);
+  lcd.print("TIMER:");
+}
+
 void displaySetTimer() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -213,34 +282,41 @@ void displayBombExplode() {
   lcd.print("BOMB EXPLODED");
   lcd.setCursor(0, 1);
   lcd.print("!TERRORISTS WIN!");
-  for (int i = 0; i < 20; i++) {
-   tone(buzzer, 2000); // Ton de bază
-  delay(50); // Pauză mică
-  noTone(buzzer); // Oprim tonul
+  for (int i = 0; i < 1000; i++) {
+  tone(buzzer, 2000);
+  delay(50);
+  noTone(buzzer);
 
-  tone(buzzer, 2500); // Ton de înaltă frecvență
-  delay(50); // Pauză mică
-  noTone(buzzer); // Oprim tonul
+  tone(buzzer, 2500);
+  delay(50);
+  noTone(buzzer);
 
-  tone(buzzer, 3000); // Ton și mai înalt de înaltă frecvență
-  delay(100); // Pauză mică
-  noTone(buzzer); // Oprim tonul
+  tone(buzzer, 3000);
+  delay(100);
+  noTone(buzzer);
 
-  delay(200); // Pauză între explozii
+  delay(200);
   }
 }
 
-void displayBombArmed() {
+void displayArmingBomb() {
+  displayStartBomb();
+  while (1) {
+    char key = customKeypad.getKey();
+    if (key == 'A') {
+      beep(500);
+      blink_led_green();
+      break;
+    }
+  }
+
   lcd.clear();
   lcd.setCursor(3, 0);
   lcd.print("BOMB ARMED!");
-  // // Sunetul de armare a bombei
   for (int i = 200; i <= 1200; i += 100) {
-    tone(buzzer, i); // Emite un ton la frecvența i Hz
-    delay(50); // Pauză mică între tonuri pentru a crea efectul de crescendo
+    tone(buzzer, i); 
+    delay(50); 
   }
-
-  // Pauză între cicluri
   delay(100);
 
   // Oprește tonul pentru o scurtă pauză
@@ -251,22 +327,19 @@ void displayBombArmed() {
 }
 
 void error_code_sound() {
-  // Secvența de tonuri pentru semnalizarea unei erori de introducere a codului
   for (int i = 1000; i <= 2000; i += 500) {
-    tone(buzzer, i); // Emite un ton la frecvența i Hz
-    delay(50); // Pauză între tonuri
-    noTone(buzzer); // Oprește tonul
-    delay(50); // Pauză între tonuri pentru a crea efectul auditiv
-  }
+    tone(buzzer, i);
+    delay(50);
+    noTone(buzzer);
+    delay(50);
 }
 
 void displayBombDefused() {
   lcd.clear();
-  lcd.setCursor(3, 0);
+  lcd.setCursor(2, 0);
   lcd.print("BOMB DEFUSED");
   lcd.setCursor(0, 1);
   lcd.print("!!!!!CS WIN!!!!!");
-  // Secvența de tonuri crescătoare
   for (int i = 100; i <= 1000; i += 50) {
     tone(buzzer, i);
     delay(10);
@@ -278,20 +351,16 @@ void displayBombDefused() {
     tone(buzzer, i); // Emite un ton la frecvența i Hz
     delay(10);
   }
-  // Oprește tonul pentru o pauză mai lungă
   noTone(buzzer);
   digitalWrite(led_pin2, HIGH);
 }
 
 void decrementTime() {
-  unsigned long currentMillis = millis(); // Obțineți timpul actual în milisecunde
-
-  // Verificați dacă trebuie să scădeți timpul
+  unsigned long currentMillis = millis(); 
   if (currentMillis - previousMillis >= interval) {
     // Actualizați timpul anterior
     previousMillis = currentMillis;
 
-    // Scadeți timpul
     if (seconds > 0) {
       seconds--;
     } else {
@@ -299,7 +368,6 @@ void decrementTime() {
         minutes--;
         seconds = 59;
       } else {
-        // Dacă timerul a expirat, opriți beep-ul și ieșiți din buclă
         return;
       }
     }
@@ -324,62 +392,13 @@ void decrementTime() {
       lcd.print(seconds);
     }
     blink_led_red();
-    //beep(2000);
+    beep(2000);
   }
 }
 
+
 void game_mode_1() {
-  Serial.println("1!");
-  displaySetTimer();
-  bool setTime = true;
-  int pos = 0;
-  bool retype = false;
-  while (setTime) {
-    lcd.blink();
-
-    char key = customKeypad.getKey();
-    
-    if (key && key >= '0' && key <= '9') {
-      beep(500);
-      blink_led_green();
-      if (pos == 0) {
-        int ch = key - '0';
-        minutes = 10 * ch;
-        lcd.print(key);
-        lcd.setCursor(5, 1);
-      } else if (pos == 1) {
-        minutes += key - '0';
-        lcd.print(key);
-        lcd.setCursor(9, 1);
-      } else if (pos == 2) {
-        seconds = 10 * (key - '0');
-        lcd.print(key);
-        lcd.setCursor(10, 1);
-      } else if (pos == 3) {
-        seconds += (key - '0');
-        lcd.print(key);
-        delay(500);
-        if (displayRetypeMessage(TIME)) {
-          minutes = 0;
-          seconds = 0;
-          retype = true;
-          displaySetTimer();
-        } else {
-          setTime = false;
-          break;
-        }
-      }
-      if (retype) {
-        pos = 0;
-        retype = false;
-      } else {
-        pos++;
-      }
-    }
-  }
-  Serial.println(minutes);
-  Serial.println(seconds);
-
+  displaySetTimerStart();
   displayIntroduceCode();
   int nr_digits = 0;
   int code_pos = 3;
@@ -409,19 +428,10 @@ void game_mode_1() {
       nr_digits++;
     }
   }
-
   Serial.println(code);
-  displayStartBomb();
 
-  while (1) {
-    char key = customKeypad.getKey();
-    if (key == 'A') {
-      beep(500);
-      blink_led_green();
-      break;
-    }
-  }
-  displayBombArmed();
+  displayArmingBomb();
+
   turn_off_green();
   delay(1000);
   lcd.clear();
@@ -482,7 +492,27 @@ void game_mode_1() {
 }
 
 void game_mode_2() {
-
+  displaySetTimerStart();
+  displayStartBomb();
+  displayArmingBomb();
+  displayIntroduceKeys();
+  while (true) {
+    readSensor1();
+    readSensor2();
+    decrementTime();
+    if (minutes == 0 && seconds == 0) {
+      displayBombExplode();
+      break;
+    }
+    if (verifyKey1() == 1 && verifyKey2() == 1) {
+      displayBombDefused();
+      break;
+    }
+    if (verifyKey1() == 2 || verifyKey2() == 2) {
+      displayBombExplode();
+      break;
+    }
+  }
 }
 
 void setup() {
@@ -508,104 +538,24 @@ void setup() {
   digitalWrite(S11, LOW);
   digitalWrite(S02, HIGH);
   digitalWrite(S12, HIGH);
-  displayInitialScreen();
-}
-
-// Funcție pentru a citi valoarea culorii
-int getRedPW(int type) {
-  int pw;
-  if (type == 1) {
-    digitalWrite(S21, LOW);
-    digitalWrite(S31, LOW);
-    pw = pulseIn(output1, LOW);
-  } else {
-    digitalWrite(S22, LOW);
-    digitalWrite(S32, LOW);
-    pw = pulseIn(output2, LOW);
-  } 
-  return pw;
-}
-
-int getGreenPW(int type) {
-  int pw;
-  if (type == 1) {
-    digitalWrite(S21, HIGH);
-    digitalWrite(S31, HIGH);
-    pw = pulseIn(output1, LOW);
-  } else {
-    digitalWrite(S22, HIGH);
-    digitalWrite(S32, HIGH);
-    pw = pulseIn(output2, LOW);
-  }
-  return pw;
-}
-
-int getBluePW(int type) {
-  int pw;
-  if (type == 1) {
-    digitalWrite(S21, LOW);
-    digitalWrite(S31, HIGH);
-    pw = pulseIn(output1, LOW);
-  } else {
-    digitalWrite(S22, LOW);
-    digitalWrite(S32, HIGH);
-    pw = pulseIn(output2, LOW);
-  }
-  return pw;
+  displayInitialScreen(); 
 }
 
 void loop() {
-  // red = getRedPW(1);
-  // redValue = map(red, redMin, redMax, 255, 0); // min la 255 si max la 0 (pwm invers la frequency)
-  // delay(200);
-
-  // blue = getBluePW(1);
-  // blueValue = map(blue, blueMin, blueMax, 255, 0);
-  // delay(200);
-
-  // green = getGreenPW(1);
-  // greenValue = map(green, greenMin, greenMax, 255, 0);
-  // delay(200); // daca nu merge de refacut vazand valorile
-  // Serial.print("Red= ");
-  // Serial.print(redValue);
-  // Serial.print(" Blue= ");
-  // Serial.print(blueValue);
-  // Serial.print(" Green= ");
-  // Serial.print(greenValue);
-  // Serial.println(' ');
-  red2 = getRedPW(2);
-  redValue2 = map(red2, redMin2, redMax2, 255, 0); // min la 255 si max la 0 (pwm invers la frequency)
-  delay(200);
-
-  blue2 = getBluePW(2);
-  blueValue2 = map(blue2, blueMin2, blueMax2, 255, 0);
-  delay(200);
-
-  green2 = getGreenPW(2);
-  greenValue2 = map(green2, greenMin2, greenMax2, 255, 0);
-  delay(200); // daca nu merge de refacut vazand valorile
-  Serial.print("Red= ");
-  Serial.print(redValue2);
-  Serial.print(" Blue= ");
-  Serial.print(blueValue2);
-  Serial.print(" Green= ");
-  Serial.print(greenValue2);
-  Serial.println(' ');
-  // char key = customKeypad.getKey();
-  // if (key) {
-  //   beep(500);
-  //   blink_led_green();
-  //   if (key == '1') {
-  //     game_mode_1();
-  //   } else if (key == '2') {
-  //     game_mode_2();
-  //   } else {
-  //     displayErrorMessage();
-  //     lcd.setCursor(0, 1);
-  //     lcd.print("PRESS 1 OR 2");
-  //     delay(2000);
-  //     displayInitialScreen();
-  //   }
-  // }
-  
+  char key = customKeypad.getKey();
+  if (key) {
+    beep(500);
+    blink_led_green();
+    if (key == '1') {
+      game_mode_1();
+    } else if (key == '2') {
+      game_mode_2();
+    } else {
+      displayErrorMessage();
+      lcd.setCursor(0, 1);
+      lcd.print("PRESS 1 OR 2");
+      delay(2000);
+      displayInitialScreen();
+    }
+  }
 }
